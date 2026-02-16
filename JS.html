@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Таймер экзамена</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .container {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      padding: 40px 60px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      text-align: center;
+      min-width: 360px;
+    }
+
+    h1 {
+      margin: 0 0 25px 0;
+      font-size: 2.2rem;
+    }
+
+    #time {
+      font-size: 5rem;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 6px;
+      margin: 20px 0 35px;
+    }
+
+    .controls button {
+      padding: 12px 28px;
+      font-size: 1.1rem;
+      margin: 0 8px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    #start    { background: #28a745; color: white; }
+    #pause    { background: #ffc107; color: #222; }
+    #reset    { background: #dc3545; color: white; }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    #warning {
+      font-size: 1.35rem;
+      font-weight: bold;
+      color: #ffdd57;
+      margin: 20px 0;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    #message {
+      font-size: 1.7rem;
+      font-weight: bold;
+      min-height: 2.4rem;
+      margin-top: 15px;
+    }
+
+    .blink {
+      animation: blink 0.9s infinite alternate;
+    }
+
+    @keyframes blink {
+      from { opacity: 1; }
+      to   { opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Таймер экзамена</h1>
+    <div id="time">00:00:00</div>
+
+    <div class="controls">
+      <button id="start">Старт</button>
+      <button id="pause" disabled>Пауза</button>
+      <button id="reset" disabled>Сброс</button>
+    </div>
+
+    <div id="warning">Осталось менее 5 минут!</div>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    let interval = null;
+    let remainingSeconds = 0;
+    let isPaused = true;
+
+    const timeDisplay = document.getElementById('time');
+    const startBtn   = document.getElementById('start');
+    const pauseBtn   = document.getElementById('pause');
+    const resetBtn   = document.getElementById('reset');
+    const warning    = document.getElementById('warning');
+    const message    = document.getElementById('message');
+
+    function formatTime(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateUI() {
+      timeDisplay.textContent = formatTime(remainingSeconds);
+
+      if (remainingSeconds <= 300 && remainingSeconds > 0) {
+        warning.style.opacity = '1';
+      } else {
+        warning.style.opacity = '0';
+      }
+
+      if (remainingSeconds <= 60) {
+        timeDisplay.classList.add('blink');
+      } else {
+        timeDisplay.classList.remove('blink');
+      }
+    }
+
+    function startOrContinue() {
+      if (remainingSeconds <= 0) {
+        const min = prompt("Сколько минут на экзамен?", "60");
+        if (!min || isNaN(min) || min <= 0) return;
+        remainingSeconds = Math.floor(Number(min) * 60);
+      }
+
+      if (isPaused) {
+        isPaused = false;
+        startBtn.textContent = "Продолжить";
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        resetBtn.disabled = false;
+        pauseBtn.textContent = "Пауза";
+
+        interval = setInterval(() => {
+          if (remainingSeconds > 0) {
+            remainingSeconds--;
+            updateUI();
+          } else {
+            finish();
+          }
+        }, 1000);
+
+        updateUI();
+      }
+    }
+
+    function pauseOrResume() {
+      if (!isPaused) {
+        // Пауза
+        clearInterval(interval);
+        isPaused = true;
+        pauseBtn.textContent = "Возобновить";
+        startBtn.disabled = false;
+      } else {
+        // Возобновление
+        startOrContinue();
+      }
+    }
+
+    function reset() {
+      clearInterval(interval);
+      isPaused = true;
+      remainingSeconds = 0;
+      timeDisplay.textContent = "00:00:00";
+      timeDisplay.classList.remove('blink');
+      warning.style.opacity = '0';
+      message.textContent = "";
+      startBtn.textContent = "Старт";
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      pauseBtn.textContent = "Пауза";
+      resetBtn.disabled = true;
+    }
+
+    function finish() {
+      clearInterval(interval);
+      isPaused = true;
+      timeDisplay.textContent = "00:00:00";
+      timeDisplay.classList.remove('blink');
+      message.textContent = "ВРЕМЯ ВЫШЛО!";
+      message.style.color = "#ff4d4d";
+      startBtn.disabled = true;
+      pauseBtn.disabled = true;
+    }
+
+    // ──────────────────────────────────────────────
+    startBtn.addEventListener('click', startOrContinue);
+    pauseBtn.addEventListener('click', pauseOrResume);
+    resetBtn.addEventListener('click', reset);
+  </script>
+
+</body>
+</html>
